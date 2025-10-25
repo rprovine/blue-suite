@@ -53,6 +53,12 @@ export default function Header() {
             >
               Tracking
             </Link>
+            <Link
+              to="/scorecard"
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+            >
+              Scorecard
+            </Link>
           </nav>
 
           {/* User Menu */}
@@ -100,6 +106,12 @@ export default function Header() {
             className="block text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
           >
             Tracking
+          </Link>
+          <Link
+            to="/scorecard"
+            className="block text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+          >
+            Scorecard
           </Link>
         </nav>
       </div>

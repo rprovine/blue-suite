@@ -8,6 +8,7 @@ import Visions from './pages/Visions';
 import Goals from './pages/Goals';
 import Tactics from './pages/Tactics';
 import WeeklyTracking from './pages/WeeklyTracking';
+import Scorecard from './pages/Scorecard';
 
 function App() {
   return (
@@ -56,6 +57,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <WeeklyTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scorecard"
+            element={
+              <ProtectedRoute>
+                <Scorecard />
               </ProtectedRoute>
             }
           />
