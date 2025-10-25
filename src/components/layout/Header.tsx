@@ -37,8 +37,7 @@ export default function Header() {
             </Link>
             <Link
               to="/goals"
-              className="text-gray-400 px-3 py-2 text-sm font-medium cursor-not-allowed"
-              onClick={(e) => e.preventDefault()}
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
             >
               Goals
             </Link>
@@ -81,10 +80,9 @@ export default function Header() {
           </Link>
           <Link
             to="/goals"
-            className="block text-gray-400 px-3 py-2 text-sm font-medium"
-            onClick={(e) => e.preventDefault()}
+            className="block text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
           >
-            Goals (Coming Soon)
+            Goals
           </Link>
           <Link
             to="/tactics"

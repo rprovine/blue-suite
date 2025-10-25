@@ -69,12 +69,12 @@ export default function Dashboard() {
                 </Link>
               </li>
               <li className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-gray-600">
+                <Link to="/goals" className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-blue-600">
                     2. Set your 12 week goals
                   </div>
-                  <div className="text-sm text-gray-500">Not started</div>
-                </div>
+                  <div className="text-sm text-gray-500">Start →</div>
+                </Link>
               </li>
               <li className="px-4 py-4 sm:px-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
