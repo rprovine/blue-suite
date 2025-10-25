@@ -1,10 +1,13 @@
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import Header from '../components/layout/Header';
 
 export default function Dashboard() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
+      <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -58,12 +61,12 @@ export default function Dashboard() {
             </div>
             <ul className="divide-y divide-gray-200">
               <li className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
+                <Link to="/visions" className="flex items-center justify-between">
                   <div className="text-sm font-medium text-blue-600">
                     1. Define your 10/3/1 year vision
                   </div>
-                  <div className="text-sm text-gray-500">Not started</div>
-                </div>
+                  <div className="text-sm text-gray-500">Start →</div>
+                </Link>
               </li>
               <li className="px-4 py-4 sm:px-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
