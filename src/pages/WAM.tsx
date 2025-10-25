@@ -7,19 +7,10 @@ import Header from '../components/layout/Header';
 type WAMRow = Database['public']['Tables']['wam_responses']['Row'];
 type WAMInsert = Database['public']['Tables']['wam_responses']['Insert'];
 
-// Get ISO week number
-function getWeekNumber(date: Date): { week: number; year: number } {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return { week: weekNo, year: d.getUTCFullYear() };
-}
-
 export default function WAM() {
-  const { user } = useAuth();
-  const [currentWeek] = useState(() => getWeekNumber(new Date()));
+  const { user} = useAuth();
+  const [currentWeek, setCurrentWeek] = useState<number>(1);
+  const [maxWeek, setMaxWeek] = useState<number>(1);
   const [wamData, setWamData] = useState({
     whatWentWell: '',
     whatDidntGoWell: '',
@@ -41,13 +32,50 @@ export default function WAM() {
       setError('');
 
       try {
+        // Find max program week if currentWeek is still 1 (initial load)
+        if (currentWeek === 1 && maxWeek === 1) {
+          // Load active goals
+          const { data: goalsData } = await supabase
+            .from('goals')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+
+          if (goalsData && goalsData.length > 0) {
+            const goalIds = (goalsData as { id: string }[]).map((g) => g.id);
+
+            // Load tactics for these goals
+            const { data: tacticsData } = await supabase
+              .from('tactics')
+              .select('id')
+              .in('goal_id', goalIds)
+              .eq('is_active', true);
+
+            if (tacticsData && tacticsData.length > 0) {
+              const tacticIds = (tacticsData as { id: string }[]).map((t) => t.id);
+
+              // Find max week_number from tactic_completions
+              const { data: maxWeekData } = await supabase
+                .from('tactic_completions')
+                .select('week_number')
+                .in('tactic_id', tacticIds)
+                .eq('user_id', user.id)
+                .order('week_number', { ascending: false })
+                .limit(1);
+
+              const programWeek = maxWeekData && maxWeekData.length > 0 ? (maxWeekData[0] as any).week_number : 1;
+              setCurrentWeek(programWeek);
+              setMaxWeek(programWeek);
+            }
+          }
+        }
+
         // Load existing WAM response for current week
         const { data, error: wamError } = await supabase
           .from('wam_responses')
           .select('*')
           .eq('user_id', user.id)
-          .eq('week_number', currentWeek.week)
-          .eq('year', currentWeek.year)
+          .eq('week_number', currentWeek)
           .maybeSingle();
 
         if (wamError) throw wamError;
@@ -60,6 +88,15 @@ export default function WAM() {
             whatDidntGoWell: wamResponse.what_didnt_go_well || '',
             whatWillDoDifferently: wamResponse.what_will_do_differently || '',
             whatSupportNeeded: wamResponse.what_support_needed || '',
+          });
+        } else {
+          // Clear form when no data for this week
+          setExistingWAM(null);
+          setWamData({
+            whatWentWell: '',
+            whatDidntGoWell: '',
+            whatWillDoDifferently: '',
+            whatSupportNeeded: '',
           });
         }
       } catch (err) {
@@ -103,8 +140,8 @@ export default function WAM() {
           // Create new WAM
           const newWAM: WAMInsert = {
             user_id: user.id,
-            week_number: currentWeek.week,
-            year: currentWeek.year,
+            week_number: currentWeek,
+            year: new Date().getFullYear(),
             what_went_well: data.whatWentWell,
             what_didnt_go_well: data.whatDidntGoWell,
             what_will_do_differently: data.whatWillDoDifferently,
@@ -132,6 +169,20 @@ export default function WAM() {
     },
     [user, existingWAM, currentWeek]
   );
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentWeek(Math.max(1, currentWeek - 1));
+    } else {
+      setCurrentWeek(Math.min(12, currentWeek + 1));
+    }
+  };
+
+  const goToCurrentWeek = () => {
+    setCurrentWeek(maxWeek);
+  };
+
+  const isCurrentWeek = currentWeek === maxWeek;
 
   const handleFieldChange = (field: keyof typeof wamData, value: string) => {
     const newData = { ...wamData, [field]: value };
@@ -173,11 +224,37 @@ export default function WAM() {
       <Header />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Weekly Accountability Meeting
-          </h1>
-          <p className="mt-2 text-gray-600">
-            Week {currentWeek.week}, {currentWeek.year} - Reflect on your progress and learnings
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Weekly Accountability Meeting
+            </h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigateWeek('prev')}
+                disabled={currentWeek === 1}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+              {!isCurrentWeek && (
+                <button
+                  onClick={goToCurrentWeek}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                >
+                  Current Week
+                </button>
+              )}
+              <button
+                onClick={() => navigateWeek('next')}
+                disabled={currentWeek === 12}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-600">
+            Week {currentWeek} of 12 - Reflect on your progress and learnings
           </p>
           {lastSaved && (
             <p className="mt-1 text-sm text-gray-500">

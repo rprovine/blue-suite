@@ -113,6 +113,20 @@ export default function WeeklyPlans() {
     loadData();
   }, [user, currentWeek]);
 
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentWeek(Math.max(1, currentWeek - 1));
+    } else {
+      setCurrentWeek(Math.min(12, currentWeek + 1));
+    }
+  };
+
+  const goToCurrentWeek = () => {
+    setCurrentWeek(maxWeek);
+  };
+
+  const isCurrentWeek = currentWeek === maxWeek;
+
   const savePlan = useCallback(
     async (goalId: string, planText: string) => {
       if (!user) return;
@@ -249,8 +263,34 @@ export default function WeeklyPlans() {
       <Header />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Weekly Plans</h1>
-          <p className="mt-2 text-gray-600">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">Weekly Plans</h1>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigateWeek('prev')}
+                disabled={currentWeek === 1}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+              {!isCurrentWeek && (
+                <button
+                  onClick={goToCurrentWeek}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                >
+                  Current Week
+                </button>
+              )}
+              <button
+                onClick={() => navigateWeek('next')}
+                disabled={currentWeek === 12}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-600">
             Week {currentWeek} of 12 - Define your weekly plans for each goal
           </p>
         </div>
