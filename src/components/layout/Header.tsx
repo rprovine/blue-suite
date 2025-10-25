@@ -43,8 +43,7 @@ export default function Header() {
             </Link>
             <Link
               to="/tactics"
-              className="text-gray-400 px-3 py-2 text-sm font-medium cursor-not-allowed"
-              onClick={(e) => e.preventDefault()}
+              className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
             >
               Tactics
             </Link>
@@ -86,10 +85,9 @@ export default function Header() {
           </Link>
           <Link
             to="/tactics"
-            className="block text-gray-400 px-3 py-2 text-sm font-medium"
-            onClick={(e) => e.preventDefault()}
+            className="block text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
           >
-            Tactics (Coming Soon)
+            Tactics
           </Link>
         </nav>
       </div>

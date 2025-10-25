@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Visions from './pages/Visions';
 import Goals from './pages/Goals';
+import Tactics from './pages/Tactics';
 
 function App() {
   return (
@@ -38,6 +39,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Goals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tactics"
+            element={
+              <ProtectedRoute>
+                <Tactics />
               </ProtectedRoute>
             }
           />
