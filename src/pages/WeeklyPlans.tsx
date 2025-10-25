@@ -14,19 +14,10 @@ interface GoalWithPlan extends GoalRow {
   saving: boolean;
 }
 
-// Get ISO week number
-function getWeekNumber(date: Date): { week: number; year: number } {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return { week: weekNo, year: d.getUTCFullYear() };
-}
-
 export default function WeeklyPlans() {
   const { user } = useAuth();
-  const [currentWeek] = useState(() => getWeekNumber(new Date()));
+  const [currentWeek, setCurrentWeek] = useState<number>(1);
+  const [maxWeek, setMaxWeek] = useState<number>(1);
   const [goals, setGoals] = useState<GoalWithPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,6 +49,31 @@ export default function WeeklyPlans() {
           return;
         }
 
+        // Find max program week if currentWeek is still 1 (initial load)
+        if (currentWeek === 1 && maxWeek === 1) {
+          const goalIds = goalsList.map((g) => g.id);
+          const { data: tacticsData } = await supabase
+            .from('tactics')
+            .select('id')
+            .in('goal_id', goalIds)
+            .eq('is_active', true);
+
+          if (tacticsData && tacticsData.length > 0) {
+            const tacticIds = tacticsData.map((t: any) => t.id);
+            const { data: maxWeekData } = await supabase
+              .from('tactic_completions')
+              .select('week_number')
+              .in('tactic_id', tacticIds)
+              .eq('user_id', user.id)
+              .order('week_number', { ascending: false })
+              .limit(1);
+
+            const programWeek = maxWeekData && maxWeekData.length > 0 ? (maxWeekData[0] as any).week_number : 1;
+            setCurrentWeek(programWeek);
+            setMaxWeek(programWeek);
+          }
+        }
+
         // Load existing weekly plans for current week
         const goalIds = goalsList.map((g) => g.id);
         const { data: plansData, error: plansError } = await supabase
@@ -65,8 +81,7 @@ export default function WeeklyPlans() {
           .select('*')
           .in('goal_id', goalIds)
           .eq('user_id', user.id)
-          .eq('week_number', currentWeek.week)
-          .eq('year', currentWeek.year);
+          .eq('week_number', currentWeek);
 
         if (plansError) throw plansError;
 
@@ -131,8 +146,8 @@ export default function WeeklyPlans() {
           const newPlan: WeeklyPlanInsert = {
             user_id: user.id,
             goal_id: goalId,
-            week_number: currentWeek.week,
-            year: currentWeek.year,
+            week_number: currentWeek,
+            year: new Date().getFullYear(),
             plan_text: planText,
           };
 
@@ -236,7 +251,7 @@ export default function WeeklyPlans() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Weekly Plans</h1>
           <p className="mt-2 text-gray-600">
-            Week {currentWeek.week}, {currentWeek.year} - Define your weekly plans for each goal
+            Week {currentWeek} of 12 - Define your weekly plans for each goal
           </p>
         </div>
 

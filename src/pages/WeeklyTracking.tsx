@@ -14,28 +14,10 @@ interface TacticWithCompletion extends TacticRow {
   completion?: CompletionRow;
 }
 
-// Get ISO week number
-function getWeekNumber(date: Date): { week: number; year: number } {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return { week: weekNo, year: d.getUTCFullYear() };
-}
-
-function getDateFromWeek(week: number, year: number): Date {
-  const simple = new Date(year, 0, 1 + (week - 1) * 7);
-  const dow = simple.getDay();
-  const ISOweekStart = simple;
-  if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-  else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-  return ISOweekStart;
-}
-
 export default function WeeklyTracking() {
   const { user } = useAuth();
-  const [currentWeek, setCurrentWeek] = useState(() => getWeekNumber(new Date()));
+  const [currentWeek, setCurrentWeek] = useState<number>(1);
+  const [maxWeek, setMaxWeek] = useState<number>(1);
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [tactics, setTactics] = useState<TacticWithCompletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,15 +70,30 @@ export default function WeeklyTracking() {
           return;
         }
 
-        // Load completions for current week
         const tacticIds = tacticsList.map((t) => t.id);
+
+        // Find max program week if currentWeek is still 1 (initial load)
+        if (currentWeek === 1 && maxWeek === 1) {
+          const { data: maxWeekData } = await supabase
+            .from('tactic_completions')
+            .select('week_number')
+            .in('tactic_id', tacticIds)
+            .eq('user_id', user.id)
+            .order('week_number', { ascending: false })
+            .limit(1);
+
+          const programWeek = maxWeekData && maxWeekData.length > 0 ? (maxWeekData[0] as any).week_number : 1;
+          setCurrentWeek(programWeek);
+          setMaxWeek(programWeek);
+        }
+
+        // Load completions for current week
         const { data: completionsData, error: completionsError } = await supabase
           .from('tactic_completions')
           .select('*')
           .in('tactic_id', tacticIds)
           .eq('user_id', user.id)
-          .eq('week_number', currentWeek.week)
-          .eq('year', currentWeek.year);
+          .eq('week_number', currentWeek);
 
         if (completionsError) throw completionsError;
 
@@ -171,8 +168,8 @@ export default function WeeklyTracking() {
         const newCompletion: CompletionInsert = {
           tactic_id: tactic.id,
           user_id: user.id,
-          week_number: currentWeek.week,
-          year: currentWeek.year,
+          week_number: currentWeek,
+          year: new Date().getFullYear(),
           completion_count: newCount,
           completed_dates: [],
         };
@@ -205,17 +202,15 @@ export default function WeeklyTracking() {
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    const weekStart = getDateFromWeek(currentWeek.week, currentWeek.year);
     if (direction === 'prev') {
-      weekStart.setDate(weekStart.getDate() - 7);
+      setCurrentWeek(Math.max(1, currentWeek - 1));
     } else {
-      weekStart.setDate(weekStart.getDate() + 7);
+      setCurrentWeek(Math.min(12, currentWeek + 1));
     }
-    setCurrentWeek(getWeekNumber(weekStart));
   };
 
   const goToCurrentWeek = () => {
-    setCurrentWeek(getWeekNumber(new Date()));
+    setCurrentWeek(maxWeek);
   };
 
   // Group tactics by goal
@@ -231,18 +226,7 @@ export default function WeeklyTracking() {
   ).length;
   const weekScore = totalTactics > 0 ? Math.round((completedTactics / totalTactics) * 100) : 0;
 
-  // Format week date range
-  const weekStart = getDateFromWeek(currentWeek.week, currentWeek.year);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekRange = `${weekStart.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-  const isCurrentWeek =
-    currentWeek.week === getWeekNumber(new Date()).week &&
-    currentWeek.year === getWeekNumber(new Date()).year;
+  const isCurrentWeek = currentWeek === maxWeek;
 
   if (loading) {
     return (
@@ -312,9 +296,8 @@ export default function WeeklyTracking() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-lg text-gray-700">
-                Week {currentWeek.week}, {currentWeek.year}
+                Week {currentWeek} of 12
               </p>
-              <p className="text-sm text-gray-500">{weekRange}</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-600">{weekScore}%</p>
