@@ -8,6 +8,8 @@ import Visions from './pages/Visions';
 import Goals from './pages/Goals';
 import Tactics from './pages/Tactics';
 import WeeklyTracking from './pages/WeeklyTracking';
+import WeeklyPlans from './pages/WeeklyPlans';
+import WAM from './pages/WAM';
 import Scorecard from './pages/Scorecard';
 
 function App() {
@@ -57,6 +59,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <WeeklyTracking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/weekly-plans"
+            element={
+              <ProtectedRoute>
+                <WeeklyPlans />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/wam"
+            element={
+              <ProtectedRoute>
+                <WAM />
               </ProtectedRoute>
             }
           />
