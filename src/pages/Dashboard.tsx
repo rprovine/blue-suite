@@ -8,16 +8,6 @@ import type { Database } from '../types/database';
 type TacticRow = Database['public']['Tables']['tactics']['Row'];
 type CompletionRow = Database['public']['Tables']['tactic_completions']['Row'];
 
-// Get ISO week number
-function getWeekNumber(date: Date): { week: number; year: number } {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return { week: weekNo, year: d.getUTCFullYear() };
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
@@ -32,8 +22,6 @@ export default function Dashboard() {
 
     const loadDashboardData = async () => {
       try {
-        const currentWeek = getWeekNumber(new Date());
-
         // Load active goals count
         const { data: goalsData, error: goalsError } = await supabase
           .from('goals')
@@ -46,6 +34,7 @@ export default function Dashboard() {
         const goalCount = goalsData?.length || 0;
         const goalIds = (goalsData as { id: string }[])?.map((g) => g.id) || [];
 
+        let programWeek = 0;
         let weeklyScore = '-';
 
         if (goalIds.length > 0) {
@@ -61,15 +50,26 @@ export default function Dashboard() {
           const tacticsList = (tacticsData as TacticRow[]) || [];
 
           if (tacticsList.length > 0) {
-            // Load completions for current week
             const tacticIds = tacticsList.map((t) => t.id);
+
+            // Find the current program week by getting the max week_number from completions
+            const { data: maxWeekData } = await supabase
+              .from('tactic_completions')
+              .select('week_number')
+              .in('tactic_id', tacticIds)
+              .eq('user_id', user.id)
+              .order('week_number', { ascending: false })
+              .limit(1);
+
+            programWeek = maxWeekData && maxWeekData.length > 0 ? (maxWeekData[0] as any).week_number : 1;
+
+            // Load completions for current program week
             const { data: completionsData, error: completionsError } = await supabase
               .from('tactic_completions')
               .select('*')
               .in('tactic_id', tacticIds)
               .eq('user_id', user.id)
-              .eq('week_number', currentWeek.week)
-              .eq('year', currentWeek.year);
+              .eq('week_number', programWeek);
 
             if (completionsError) throw completionsError;
 
@@ -93,7 +93,7 @@ export default function Dashboard() {
 
         setStats({
           activeGoals: goalCount,
-          currentWeek: currentWeek.week,
+          currentWeek: programWeek,
           weeklyScore,
           loading: false,
         });
